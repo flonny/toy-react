@@ -13,8 +13,9 @@ export class Component {
     this.children.push(vchild);
   }
 }
-class ElementWrapper {
+class ElementWrapper extends Component{
   constructor(type) {
+    super()
     this.root = document.createElement(type);
   }
   setAttribute(name, value) {
@@ -27,8 +28,9 @@ class ElementWrapper {
     parent.appendChild(this.root);
   }
 }
-class TextWrapper {
+class TextWrapper extends Component {
   constructor(content) {
+    super()
     this.root = document.createTextNode(content);
   }
   mountTo(parent) {
@@ -51,7 +53,7 @@ export let ToyReact = {
         if (typeof child === "object" && child instanceof Array) {
           insertChildren(child);
         } else {
-          if(!(child instanceof Component)&& !(child instanceof ElementWrapper)&& !(child instanceof TextWrapper)){
+          if(!(child instanceof Component)){
             child = String(child)
           }
           if (typeof child === "string") {
@@ -62,11 +64,9 @@ export let ToyReact = {
       }
     };
     insertChildren(children);
-
     return element;
   },
   render(vdom, element) {
-    console.log(vdom, "");
     vdom.mountTo(element);
   },
 };
