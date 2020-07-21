@@ -30,7 +30,7 @@ class Square extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      value: '',
+      value: null,
     };
   }
   render() {
@@ -41,7 +41,7 @@ class Square extends Component {
           this.setState({ value: "x" });
         }}
       >
-        {this.state.value}
+        {this.state.value ? this.state.value : ""}
       </button>
     );
   }
