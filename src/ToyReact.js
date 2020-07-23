@@ -1,222 +1,238 @@
-export class Component {
+let childrenSymbol = Symbol("children")
+class ElementWrapper {
   constructor(type) {
-    this._type =type
-    this.children = [];
-    this.props = Object.create(null);
+    this.type = type
+    this.props = Object.create(null)
+    this[childrenSymbol] = []
+    this.children = []
   }
- get type() {
-   return this._type || this.constructor.name
- }
- set type(val) {
-   this._type =val
- }
   setAttribute(name, value) {
-    this.props[name] = value;
-    // this[name] = value;
+    this.props[name] = value
   }
   appendChild(vchild) {
-    this.children.push(vchild);
-  }
-  mountTo(range) {
-    this.range = range;
-    this.updated();
-  }
-  updated() {
-    
-    // let placeholder = document.createComment("placeholder");
-    // let range = document.createRange();
-    // range.setStart(this.range.endContainer, this.range.endOffset);
-    // range.setEnd(this.range.endContainer, this.range.endOffset);
-    // range.insertNode(placeholder);
-    let isSameNode = (node1, node2) => {
-      if (node1.type !== node2.type) {
-        return false;
-      }
-      for (let name in node1.props) {
-        const newProp = node1.props[name];
-        const oldProp = node2.props[name];
-        if(typeof newProp === 'function' && typeof oldProp === 'function') {
-          if( String(newProp)===String(oldProp)) {
-            continue
-          }
-        }
-        if(typeof newProp === 'object' && typeof oldProp === 'object') {
-          if( JSON.stringify(newProp)===JSON.stringify(oldProp)) {
-            continue
-          }
-        }
-        if (
-          Object.keys(node1.props).length !== Object.keys(node2.props).length
-        ) {
-          return false;
-        }
-        if (newProp !== oldProp) {
-          console.log('deffirent')
-          return false;
-        }
-      }
-      // console.log('all same')
-      return true;
-    };
-    let isSameTree = (node1, node2) => {
-      if (!isSameNode(node1, node2)) {
-        return false;
-      }
-      if (node1.children.length !== node2.children.length) {
-        return false;
-      }
-      for (let i = 0; i < node1.children.length; i++) {
-        if (!isSameTree(node1.children[i], node2.children[i])) {
-          return false;
-        }
-      }
-      return true;
-    };
-    let replace = (newT, oldT) => {
-      if (oldT && isSameTree(newT, oldT)) {
-        return;
-      }
-      if (!oldT || !isSameNode(newT, oldT)) {
-        if (oldT && oldT.range) {
-          console.log(newT,oldT.vdom.range)
-          newT.mountTo(oldT.vdom.range);
-        } else {
-          // const range =document.createRange()
-          // newT.mountTo(range)
-        }
-      } else {
-        for (let i = 0; i < newT.children.length; i++) {
-          replace(newT.children[i], oldT.children[i]);
-        }
-      }
-    };
-    let vdom = this.render();
-    if (this.vdom) { 
-      if (!isSameNode(vdom, this.vdom)) {
-        vdom.mountTo(this.range);
-        this.vdom = vdom;
-      } else {
-        replace(vdom, this.vdom);
-      }
-    } else {
-      this.vdom = vdom;
-      vdom.mountTo(this.range);
-    }
-  }
-  setState(state) {
-    let merge = (oldState, newState) => {
-      for (let p in newState) {
-        if (typeof newState[p] === "object" && newState[p] !== null) {
-          if (typeof oldState[p] !== "object") {
-            if (newState[p] instanceof Array) {
-              oldState[p] = [];
-            } else {
-              oldState[p] = {};
-            }
-          }
-          merge(oldState[p], newState[p]);
-        } else {
-          oldState[p] = newState[p];
-        }
-      }
-    };
-    if (!this.state && state) {
-      this.state = {};
-    }
-    merge(this.state, state);
-    this.updated();
-  }
-}
-class ElementWrapper extends Component {
-  constructor(type) {
-    super(type);
+    this[childrenSymbol].push(vchild)
+    this.children.push(vchild.vdom)
   }
   get vdom() {
-    
+    return this
   }
   mountTo(range) {
-    this.range = range;
-    range.deleteContents();
-    let element = document.createElement(this.type);
-    for (let name in this.props) {
+    this.range = range
+
+    let placehodler = document.createComment('placehodler')
+    let endRange = document.createRange()
+    endRange.setStart(range.endContainer, range.endOffset)
+    endRange.setEnd(range.endContainer, range.endOffset)
+    endRange.insertNode(placehodler)
+
+    range.deleteContents()
+    let element = document.createElement(this.type)
+
+    for (const name in this.props) {
+      let value = this.props[name];
       if (name.match(/^on([\s\S]+)$/)) {
-        const eventType = RegExp.$1.replace(/^[\s\S]/, (s) =>
-          s.toLocaleLowerCase()
-        );
-        element.addEventListener(eventType, this.props[name]);
+        let eventName = RegExp.$1.replace(/^[\s\S]/, s => s.toLowerCase());
+        element.addEventListener(eventName, value)
       }
-      if (name === "className") {
-        element.setAttribute("class", this.props[name]);
-      } else {
-        element.setAttribute(name, this.props[name]);
+      if (name === 'className') {
+        element.setAttribute("class", value)
       }
+      element.setAttribute(name, value)
+
     }
-    for (let vchild of this.children) {
-      const range = document.createRange();
+
+    for (let child of this.children) {
+      let range = document.createRange()
       if (element.children.length) {
-        range.setStartAfter(element.lastChild);
-        range.setEndAfter(element.lastChild);
+        range.setStartAfter(element.lastChild)
+        range.setEndAfter(element.lastChild)
       } else {
-        range.setStart(element, 0);
-        range.setEnd(element, 0);
+        range.setStart(element, 0)
+        range.setEnd(element, 0)
       }
-      vchild.mountTo(range);
+      child.mountTo(range)
     }
-    range.insertNode(element);
+
+    range.insertNode(element)
   }
 }
-class TextWrapper extends Component {
+class TextWrapper {
   constructor(content) {
-    super("#text");
-    this.type = "#text";
-    this.root = document.createTextNode(content);
+    this.root = document.createTextNode(content)
+    this.type = "#text"
+    this.children = []
+    this.props = Object.create(null)
   }
   mountTo(range) {
-    range.deleteContents();
-    range.insertNode(this.root);
+    this.range = range
+    range.deleteContents()
+    range.insertNode(this.root)
+  }
+  get vdom() {
+    return this
+  }
+}
+export class Component {
+  constructor() {
+    this.children = []
+    this.props = Object.create(null)
+  }
+  get type() {
+    return this.constructor.name
+  }
+  setAttribute(name, value) {
+    this.props[name] = value
+    this.name = value
+  }
+  mountTo(range) {
+    this.range = range
+    this.update();
+  }
+
+  update() {
+    let vdom = this.vdom;
+    if (this.oldVom) {
+      let isSameNode = (node1, node2) => {
+        if (node1.type !== node2.type) {
+          return false
+        }
+
+        for (let name in node1.props) {
+          const prop1 = node1.props[name];
+          const prop2 = node2.props[name];
+          if (typeof prop1 === "object" && typeof prop2 === "object"
+            && JSON.stringify(prop1) === JSON.stringify(prop2)) {
+            continue
+          }
+          if (prop1 !== prop2) {
+            return false
+          }
+        }
+        if (Object.keys(node1.props).length !== Object.keys(node2.props).length) {
+          return false
+        }
+
+        return true
+      }
+
+      let isSameTree = (node1, node2) => {
+
+        if (!isSameNode(node1, node2)) {
+          return false
+        }
+        if (node1.children.length !== node2.children.length) {
+          return false
+        }
+        for (let i = 0; i < node1.children.length; i++) {
+          if (!isSameTree(node1.children[i], node2.children[i])) {
+            return false
+          }
+
+        }
+
+        return true
+      }
+      let replace = (newTree, oldTree, indent) => {
+        if (isSameTree(newTree, oldTree)) {
+          console.log('all same')
+          return
+        }
+        if (!isSameNode(newTree, oldTree)) {
+
+          console.log("all defferent")
+          newTree.mountTo(oldTree.range)
+        } else {
+          for (let i = 0; i < newTree.children.length; i++) {
+            replace(newTree.children[i], oldTree.children[i], "  " + indent)
+          }
+        }
+      }
+      replace(vdom, this.oldVom, "")
+    } else {
+      // console.log(vdom)
+      vdom.mountTo(this.range)
+    }
+    this.oldVom = vdom
+  }
+  get vdom() {
+    return this.render().vdom
+  }
+  appendChild(vchild) {
+    this.children.push(vchild)
+  }
+  setState(state) {
+    console.log(state)
+    let merge = (oldState, newState) => {
+      console.log(this.state)
+
+      for (let p in newState) {
+        if (typeof newState[p] === 'object' && newState[p] !== null) {
+          if (typeof oldState[p] !== 'object') {
+            if (newState[p] instanceof Array) {
+              oldState[p] = []
+            } else {
+              oldState[p] = {}
+            }
+         
+          }
+          merge(oldState[p], newState[p])
+        } else {
+          oldState[p] = newState[p]
+        }
+      }
+
+    }
+    if (!this.state && state) {
+      this.state = {}
+    }
+    merge(this.state, state)
+    this.update();
   }
 }
 export let ToyReact = {
-  createElement(type, arrtributes, ...children) {
+  createElement(type, attributes, ...children) {
     let element;
-    if (typeof type === "string") {
-      element = new ElementWrapper(type);
+    if (typeof type === 'string') {
+      element = new ElementWrapper(type)
     } else {
-      element = new type();
+      element = new type;
     }
-    for (let name in arrtributes) {
-      element.setAttribute(name, arrtributes[name]);
+    for (let name in attributes) {
+      element.setAttribute(name, attributes[name])
     }
+
     let insertChildren = (children) => {
       for (let child of children) {
-        if (typeof child === "object" && child instanceof Array) {
-          insertChildren(child);
+        if (typeof child === 'object' && child instanceof Array) {
+          insertChildren(child)
         } else {
           if (child === null || child === void 0) {
-            child = "";
+            child = ""
           }
-          if (!(child instanceof Component)) {
-            child = String(child);
+          if (!(child instanceof Component)
+            && !(child instanceof ElementWrapper)
+            && !(child instanceof TextWrapper)) {
+            child = String(child)
           }
-          if (typeof child === "string") {
-            child = new TextWrapper(child);
+          if (typeof child === 'string') {
+            child = new TextWrapper(child)
           }
-          element.appendChild(child);
+          element.appendChild(child)
         }
       }
-    };
-    insertChildren(children);
-    return element;
+    }
+    insertChildren(children)
+    return element
   },
   render(vdom, element) {
     let range = document.createRange();
-    if (element.children.length > 0) {
-      range.setStartAfter(element.lastChild);
-      range.setEndAfter(element.lastChild);
+    if (element.children.length) {
+      range.setStartAfter(element.lastChild)
+      range.setEndAfter(element.lastChild)
     } else {
-      range.setStart(element, 0);
-      range.setEnd(element, 0);
+      range.setStart(element, 0)
+      range.setEnd(element, 0)
     }
-    vdom.mountTo(range);
-  },
-};
+    vdom.mountTo(range)
+  }
+}

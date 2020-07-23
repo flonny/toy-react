@@ -91,6 +91,7 @@ class Game extends Component {
   render() {
     const history = this.state.history;
     const current = history[this.state.stepNumber];
+    console.log(current)
     const winner = calculateWinner(current.squares);
 
     const moves = history.map((step, move) => {
@@ -119,10 +120,6 @@ class Game extends Component {
             onClick={i => this.handleClick(i)}
           />
         </div>
-        <div className="game-info">
-          <div>{status}</div>
-          <ol>{moves}</ol>
-        </div>
       </div>
     );
   }
@@ -130,7 +127,6 @@ class Game extends Component {
 
 // ========================================
 let game = <Game/>
-console.log(game.tty)
 ToyReact.render(game, document.getElementById("root"));
 
 function calculateWinner(squares) {
